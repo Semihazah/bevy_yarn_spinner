@@ -1,0 +1,4 @@
+cargo:rustc-env=PROTOC=C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\prost-build-0.7.0\third-party\protobuf\protoc-win32.exe
+cargo:rustc-env=PROTOC_INCLUDE=C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\prost-build-0.7.0\third-party\protobuf\include
+cargo:rerun-if-env-changed=PROTOC
+cargo:rerun-if-env-changed=PROTOC_INCLUDE

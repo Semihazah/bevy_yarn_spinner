@@ -1,0 +1,17 @@
+[package]
+name = "bevy_yarn_spinner"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = { version = "0.6.0"}
+yharnam = "0.0.1"
+csv = "1.1.6"
+prost = "0.7"
+anyhow = "1.0.4"
+derive_deref = "1.1.1"
+
+[build-dependencies]
+prost-build = "0.7"

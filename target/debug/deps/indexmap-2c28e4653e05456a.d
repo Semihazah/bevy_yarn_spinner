@@ -1,0 +1,13 @@
+c:\Users\ZHuds\Documents\GitHub\bevy_yarn_spinner\target\debug\deps\indexmap-2c28e4653e05456a.rmeta: C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\lib.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\macros.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\equivalent.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\mutable_keys.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\util.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\map.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\map\core.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\map\core\raw.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\set.rs
+
+c:\Users\ZHuds\Documents\GitHub\bevy_yarn_spinner\target\debug\deps\indexmap-2c28e4653e05456a.d: C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\lib.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\macros.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\equivalent.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\mutable_keys.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\util.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\map.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\map\core.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\map\core\raw.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\set.rs
+
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\lib.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\macros.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\equivalent.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\mutable_keys.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\util.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\map.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\map\core.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\map\core\raw.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\indexmap-1.8.0\src\set.rs:

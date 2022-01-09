@@ -1,0 +1,13 @@
+c:\Users\ZHuds\Documents\GitHub\bevy_yarn_spinner\target\debug\deps\tracing-c43ecf4535ae7e77.rmeta: C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\lib.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\macros.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\dispatcher.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\field.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\instrument.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\level_filters.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\span.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\stdlib.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\subscriber.rs
+
+c:\Users\ZHuds\Documents\GitHub\bevy_yarn_spinner\target\debug\deps\tracing-c43ecf4535ae7e77.d: C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\lib.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\macros.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\dispatcher.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\field.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\instrument.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\level_filters.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\span.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\stdlib.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\subscriber.rs
+
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\lib.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\macros.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\dispatcher.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\field.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\instrument.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\level_filters.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\span.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\stdlib.rs:
+C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\tracing-0.1.29\src\subscriber.rs:

@@ -1,0 +1,1 @@
+C:\Users\ZHuds\Documents\GitHub\bevy_yarn_spinner\target\debug\libbevy_yarn_spinner.rlib: C:\Users\ZHuds\Documents\GitHub\bevy_yarn_spinner\build.rs C:\Users\ZHuds\Documents\GitHub\bevy_yarn_spinner\src\lib.rs
