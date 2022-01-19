@@ -284,7 +284,8 @@ impl AssetLoader for YarnProgramLoader {
 
             table_path.set_extension("csv");
 
-            let mut csv_reader = csv::Reader::from_path(table_path).unwrap();
+            let bytes = load_context.read_asset_bytes(table_path).await.unwrap();
+            let mut csv_reader = csv::Reader::from_reader(bytes.as_slice());
             let table: Vec<LineInfo> = csv_reader
                 .deserialize()
                 .map(|result| result.unwrap())
