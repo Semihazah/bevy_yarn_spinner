@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, path::PathBuf};
 
 use bevy::{
-    asset::{AssetLoader, LoadedAsset},
+    asset::{AssetLoader, LoadState, LoadedAsset},
     ecs::{schedule::ShouldRun, system::Command},
     prelude::*,
     reflect::TypeUuid,
@@ -32,18 +32,21 @@ impl Plugin for DialoguePlugin {
 
         let handle: Handle<YarnProgram> = asset_server.load(self.starting_program_path.as_path());
 
-        let mut programs = app.world.get_resource_mut::<Assets<YarnProgram>>().unwrap();
-
-        let mut program = programs.remove(handle.clone());
-        while program.is_none() {
+        let mut program_state = asset_server.get_load_state(handle.clone());
+        if program_state == LoadState::Failed {
+            panic!("Failed to load initial yarn program!");
+        }
+        while program_state != LoadState::Loaded {
             std::thread::sleep(std::time::Duration::from_millis(1));
-            program = programs.remove(handle.clone());
+            program_state = asset_server.get_load_state(handle.clone());
         }
 
-        let p = program.unwrap();
+        let mut programs = app.world.get_resource_mut::<Assets<YarnProgram>>().unwrap();
+
+        let program = programs.remove(handle).unwrap();
         app.insert_resource(DialogueRunner {
-            vm: VirtualMachine::new(p.program),
-            table: p.table,
+            vm: VirtualMachine::new(program.program),
+            table: program.table,
             state: DialogueRunnerState::Idle,
         });
     }
