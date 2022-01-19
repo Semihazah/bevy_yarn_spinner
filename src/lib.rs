@@ -33,11 +33,12 @@ impl Plugin for DialoguePlugin {
         let handle: Handle<YarnProgram> = asset_server.load(self.starting_program_path.as_path());
 
         let mut program_state = asset_server.get_load_state(handle.clone());
-        if program_state == LoadState::Failed {
-            panic!("Failed to load initial yarn program!");
-        }
+
         while program_state != LoadState::Loaded {
             std::thread::sleep(std::time::Duration::from_millis(1));
+            if program_state == LoadState::Failed {
+                panic!("Failed to load initial yarn program!");
+            }
             program_state = asset_server.get_load_state(handle.clone());
         }
 
