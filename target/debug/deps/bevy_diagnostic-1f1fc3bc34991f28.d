@@ -1,9 +1,0 @@
-c:\Users\ZHuds\Documents\GitHub\bevy_yarn_spinner\target\debug\deps\bevy_diagnostic-1f1fc3bc34991f28.rmeta: C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\lib.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\diagnostic.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\entity_count_diagnostics_plugin.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\frame_time_diagnostics_plugin.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\log_diagnostics_plugin.rs
-
-c:\Users\ZHuds\Documents\GitHub\bevy_yarn_spinner\target\debug\deps\bevy_diagnostic-1f1fc3bc34991f28.d: C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\lib.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\diagnostic.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\entity_count_diagnostics_plugin.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\frame_time_diagnostics_plugin.rs C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\log_diagnostics_plugin.rs
-
-C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\lib.rs:
-C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\diagnostic.rs:
-C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\entity_count_diagnostics_plugin.rs:
-C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\frame_time_diagnostics_plugin.rs:
-C:\Users\ZHuds\.cargo\registry\src\github.com-1ecc6299db9ec823\bevy_diagnostic-0.6.0\src\log_diagnostics_plugin.rs:
