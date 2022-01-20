@@ -174,9 +174,9 @@ fn update_runner(
     dialogue_commands: Res<DialogueCommands>, */
 ) {
     world.resource_scope(|world, mut runner: Mut<DialogueRunner>| {
-        if matches!(runner.state, DialogueRunnerState::Running {..}) {
-            let mut text = "";
-            let mut options = None;
+        if let DialogueRunnerState::Running {text, ..} = runner.state.clone() {
+            let mut next_text = "";
+            let mut next_options = None;
             match runner.vm.execution_state {
                 ExecutionState::WaitingOnOptionSelection => return,
                 _ => {
@@ -187,7 +187,7 @@ fn update_runner(
                             .map(|line_info| &line_info.text)
                             ;
                             if let Some(new_text) = new_text {
-                                text = new_text;
+                                next_text = new_text;
                             }
                             else {
                                 panic!("Error! unable to find line!");
@@ -196,15 +196,16 @@ fn update_runner(
                         SuspendReason::Options(new_options) => {
                             let mut o = Vec::new();
                             for opt in new_options.iter() {
-                                let text = runner.table.iter()
+                                let t = runner.table.iter()
                                     .find(|line_info| line_info.id == opt.line.id)
                                     .map(|line_info| &line_info.text)
                                 ;
-                                if let Some(text) = text {
-                                    o.push(text.clone());
+                                if let Some(t) = t {
+                                    o.push(t.clone());
                                 }
                             }
-                            options = Some(o);
+                            next_text = &text;
+                            next_options = Some(o);
                         }
                         SuspendReason::Command(command_text) => {
                             println!("== Command: {} ==", command_text);
@@ -253,8 +254,8 @@ fn update_runner(
             }
 
             runner.state = DialogueRunnerState::Running {
-                text: text.to_string(),
-                options,
+                text: next_text.to_string(),
+                options: next_options,
             }
         }
     });
