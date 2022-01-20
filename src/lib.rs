@@ -174,88 +174,87 @@ fn update_runner(
     dialogue_commands: Res<DialogueCommands>, */
 ) {
     world.resource_scope(|world, mut runner: Mut<DialogueRunner>| {
-        match runner.state.clone() {
-            DialogueRunnerState::Idle => {
-                return
-            },
-            DialogueRunnerState::Running {
-                ref mut text,
-                ref mut options,
-            } => {
-                match runner.vm.execution_state {
-                    ExecutionState::WaitingOnOptionSelection => return,
-                    _ => {
-                        match runner.vm.continue_dialogue() {
-                            SuspendReason::Line(line) => {
-                                *options = None;
-                                let new_text = runner.table.iter()
-                                .find(|line_info| line_info.id == line.id)
-                                .map(|line_info| &line_info.text)
+        if matches!(runner.state, DialogueRunnerState::Running {..}) {
+            let mut text = "";
+            let mut options = None;
+            match runner.vm.execution_state {
+                ExecutionState::WaitingOnOptionSelection => return,
+                _ => {
+                    match runner.vm.continue_dialogue() {
+                        SuspendReason::Line(line) => {
+                            let new_text = runner.table.iter()
+                            .find(|line_info| line_info.id == line.id)
+                            .map(|line_info| &line_info.text)
+                            ;
+                            if let Some(new_text) = new_text {
+                                text = new_text;
+                            }
+                            else {
+                                panic!("Error! unable to find line!");
+                            }
+                        }
+                        SuspendReason::Options(new_options) => {
+                            let mut o = Vec::new();
+                            for opt in new_options.iter() {
+                                let text = runner.table.iter()
+                                    .find(|line_info| line_info.id == opt.line.id)
+                                    .map(|line_info| &line_info.text)
                                 ;
-                                if let Some(new_text) = new_text {
-                                    *text = new_text.clone();
-                                }
-                                else {
-                                    panic!("Error! unable to find line!");
+                                if let Some(text) = text {
+                                    o.push(text.clone());
                                 }
                             }
-                            SuspendReason::Options(new_options) => {
-                                let mut o = Vec::new();
-                                for opt in new_options.iter() {
-                                    let text = runner.table.iter()
-                                        .find(|line_info| line_info.id == opt.line.id)
-                                        .map(|line_info| &line_info.text)
-                                    ;
-                                    if let Some(text) = text {
-                                        o.push(text.clone());
+                            options = Some(o);
+                        }
+                        SuspendReason::Command(command_text) => {
+                            println!("== Command: {} ==", command_text);
+                            let mut arguments: Vec<String> = command_text.split(" ").map(|s| {s.to_string()}).collect()
+                            ;
+                            if !arguments.is_empty() {
+                                let name = arguments.remove(0);
+                                world.resource_scope(|world, dialogue_commands: Mut<DialogueCommands>| {
+                                    if let Some(com) = dialogue_commands.get(&name) {
+                                        com(world, arguments);
                                     }
-                                }
-                                *options = Some(o);
+                                });
                             }
-                            SuspendReason::Command(command_text) => {
-                                println!("== Command: {} ==", command_text);
-                                let mut arguments: Vec<String> = command_text.split(" ").map(|s| {s.to_string()}).collect()
-                                ;
-                                if !arguments.is_empty() {
-                                    let name = arguments.remove(0);
-                                    world.resource_scope(|world, dialogue_commands: Mut<DialogueCommands>| {
-                                        if let Some(com) = dialogue_commands.get(&name) {
-                                            com(world, arguments);
-                                        }
-                                    });
-                                }
-                            },
-                            SuspendReason::NodeChange { start, end } => {
-                                println!("== Node end: {} ==", end);
-                                println!("== Node start: {} ==", start);
-                            },
-                            SuspendReason::DialogueComplete(last_node) => {
-                                println!("== Node end: {} ==", last_node);
-                                println!("== Dialogue complete ==");
-                                world.resource_scope(|world, mut queue: Mut<DialogueQueue>| {
-                                    match queue.pop_front() {
-                                        Some(entry) => {
-                                            world.resource_scope(|world, mut yarn_programs: Mut<Assets<YarnProgram>>| {
-                                                world.resource_scope(|_world, mut yarn_tables: Mut<Assets<YarnStringTable>>| {
-                                                    if yarn_programs.get(&entry.program).is_some() && yarn_tables.get(&entry.table).is_some() {
-                                                        if let Some(program) = yarn_programs.remove(entry.program) {
-                                                            if let Some(table) = yarn_tables.remove(entry.table) {
-                                                                runner.setup(program, table, entry.start_node)
-                                                            }
+                        },
+                        SuspendReason::NodeChange { start, end } => {
+                            println!("== Node end: {} ==", end);
+                            println!("== Node start: {} ==", start);
+                        },
+                        SuspendReason::DialogueComplete(last_node) => {
+                            println!("== Node end: {} ==", last_node);
+                            println!("== Dialogue complete ==");
+                            world.resource_scope(|world, mut queue: Mut<DialogueQueue>| {
+                                match queue.pop_front() {
+                                    Some(entry) => {
+                                        world.resource_scope(|world, mut yarn_programs: Mut<Assets<YarnProgram>>| {
+                                            world.resource_scope(|_world, mut yarn_tables: Mut<Assets<YarnStringTable>>| {
+                                                if yarn_programs.get(&entry.program).is_some() && yarn_tables.get(&entry.table).is_some() {
+                                                    if let Some(program) = yarn_programs.remove(entry.program) {
+                                                        if let Some(table) = yarn_tables.remove(entry.table) {
+                                                            runner.setup(program, table, entry.start_node)
                                                         }
-                                                    } else {
-                                                        runner.state = DialogueRunnerState::Idle;
                                                     }
-                                                });
+                                                } else {
+                                                    runner.state = DialogueRunnerState::Idle;
+                                                }
                                             });
-                                        }
-                                        None => runner.state = DialogueRunnerState::Idle,
+                                        });
                                     }
-                                })
-                            }
+                                    None => runner.state = DialogueRunnerState::Idle,
+                                }
+                            });
+                            return
                         }
                     }
                 }
+            }
+
+            runner.state = DialogueRunnerState::Running {
+                text: text.to_string(),
+                options,
             }
         }
     });
