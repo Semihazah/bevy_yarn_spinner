@@ -1,7 +1,7 @@
-use std::{collections::VecDeque, path::PathBuf};
+use std::{collections::VecDeque, fs, path::PathBuf};
 
 use bevy::{
-    asset::{AssetLoader, LoadState, LoadedAsset},
+    asset::{AssetLoader, LoadedAsset},
     ecs::{schedule::ShouldRun, system::Command},
     prelude::*,
     reflect::TypeUuid,
@@ -16,38 +16,33 @@ pub mod yarn_proto {
 }
 
 pub struct DialoguePlugin {
-    pub starting_program_path: PathBuf,
+    pub startup_program: PathBuf,
 }
 
 impl Plugin for DialoguePlugin {
     fn build(&self, app: &mut App) {
         app.add_asset::<YarnProgram>()
+            .add_asset::<YarnStringTable>()
             .init_asset_loader::<YarnProgramLoader>()
+            .init_asset_loader::<YarnStringTableLoader>()
             .init_resource::<DialogueQueue>()
             .add_system_to_stage(CoreStage::PreUpdate, check_queue.system())
             .add_system_to_stage(CoreStage::PostUpdate, update_runner.exclusive_system())
             .init_resource::<DialogueCommands>();
 
-        let asset_server = app.world.get_resource::<AssetServer>().unwrap();
+        let program_bytes = fs::read(self.startup_program.as_path()).unwrap();
+        let program = Program::decode(&*program_bytes).unwrap();
 
-        let handle: Handle<YarnProgram> = asset_server.load(self.starting_program_path.as_path());
-
-        let mut program_state = asset_server.get_load_state(handle.clone());
-
-        while program_state != LoadState::Loaded {
-            std::thread::sleep(std::time::Duration::from_millis(1));
-            if program_state == LoadState::Failed {
-                panic!("Failed to load initial yarn program!");
-            }
-            program_state = asset_server.get_load_state(handle.clone());
-        }
-
-        let mut programs = app.world.get_resource_mut::<Assets<YarnProgram>>().unwrap();
-
-        let program = programs.remove(handle).unwrap();
+        let mut csv_path = self.startup_program.clone();
+        csv_path.set_extension("csv");
+        let mut csv_reader = csv::Reader::from_path(csv_path).unwrap();
+        let string_table: Vec<LineInfo> = csv_reader
+            .deserialize()
+            .map(|result| result.unwrap())
+            .collect();
         app.insert_resource(DialogueRunner {
-            vm: VirtualMachine::new(program.program),
-            table: program.table,
+            vm: VirtualMachine::new(program),
+            table: string_table,
             state: DialogueRunnerState::Idle,
         });
     }
@@ -82,6 +77,7 @@ pub struct DialogueQueue {
 pub struct DialogueQueueEntry {
     pub path: PathBuf,
     pub program: Handle<YarnProgram>,
+    pub table: Handle<YarnStringTable>,
     pub start_node: Option<String>,
 }
 
@@ -101,13 +97,13 @@ pub enum DialogueRunnerState {
 }
 
 impl DialogueRunner {
-    fn setup(&mut self, program: YarnProgram, start_node: Option<String>) {
+    fn setup(&mut self, program: YarnProgram, table: YarnStringTable, start_node: Option<String>) {
         let start_node = match start_node {
             Some(s) => s.clone(),
             None => "Start".to_string(),
         };
-        self.vm.program = program.program;
-        self.table = program.table;
+        self.vm.program = program.0;
+        self.table = table.0;
         //println!("Nodes: {:?}", vm.program.nodes);
         if self.vm.program.nodes.contains_key(&start_node) {
             // Set the start node.
@@ -141,6 +137,7 @@ fn check_queue(
     mut queue: ResMut<DialogueQueue>,
     mut runner: ResMut<DialogueRunner>,
     mut yarn_programs: ResMut<Assets<YarnProgram>>,
+    mut yarn_tables: ResMut<Assets<YarnStringTable>>,
 ) {
     if runner.state == DialogueRunnerState::Idle && !queue.is_empty() {
         println!("Setting up runner");
@@ -148,9 +145,12 @@ fn check_queue(
             .pop_front()
             .expect("setup_runner: Dialogue queue empty!");
 
-        if yarn_programs.get(&entry.program).is_some() {
+        if yarn_programs.get(&entry.program).is_some() && yarn_tables.get(&entry.table).is_some() {
             if let Some(program) = yarn_programs.remove(entry.program) {
-                runner.setup(program, entry.start_node);
+                println!("Program Valid!");
+                if let Some(table) = yarn_tables.remove(entry.table) {
+                    runner.setup(program, table, entry.start_node)
+                }
             } else {
                 println!("Program not ready yet!");
             }
@@ -173,83 +173,92 @@ fn update_runner(
     mut yarn_programs: ResMut<Assets<YarnProgram>>,
     dialogue_commands: Res<DialogueCommands>, */
 ) {
-    world.resource_scope(
-        |world, mut runner: Mut<DialogueRunner>| match runner.state.clone() {
-            DialogueRunnerState::Idle => return,
+    world.resource_scope(|world, mut runner: Mut<DialogueRunner>| {
+        match runner.state.clone() {
+            DialogueRunnerState::Idle => {
+                return
+            },
             DialogueRunnerState::Running {
                 ref mut text,
                 ref mut options,
-            } => match runner.vm.execution_state {
-                ExecutionState::WaitingOnOptionSelection => return,
-                _ => match runner.vm.continue_dialogue() {
-                    SuspendReason::Line(line) => {
-                        *options = None;
-                        let new_text = runner
-                            .table
-                            .iter()
-                            .find(|line_info| line_info.id == line.id)
-                            .map(|line_info| &line_info.text);
-                        if let Some(new_text) = new_text {
-                            *text = new_text.clone();
-                        } else {
-                            panic!("Error! unable to find line!");
-                        }
-                    }
-                    SuspendReason::Options(new_options) => {
-                        let mut o = Vec::new();
-                        for opt in new_options.iter() {
-                            let text = runner
-                                .table
-                                .iter()
-                                .find(|line_info| line_info.id == opt.line.id)
-                                .map(|line_info| &line_info.text);
-                            if let Some(text) = text {
-                                o.push(text.clone());
+            } => {
+                match runner.vm.execution_state {
+                    ExecutionState::WaitingOnOptionSelection => return,
+                    _ => {
+                        match runner.vm.continue_dialogue() {
+                            SuspendReason::Line(line) => {
+                                *options = None;
+                                let new_text = runner.table.iter()
+                                .find(|line_info| line_info.id == line.id)
+                                .map(|line_info| &line_info.text)
+                                ;
+                                if let Some(new_text) = new_text {
+                                    *text = new_text.clone();
+                                }
+                                else {
+                                    panic!("Error! unable to find line!");
+                                }
                             }
-                        }
-                        *options = Some(o);
-                    }
-                    SuspendReason::Command(command_text) => {
-                        println!("== Command: {} ==", command_text);
-                        let mut arguments: Vec<String> =
-                            command_text.split(" ").map(|s| s.to_string()).collect();
-                        if !arguments.is_empty() {
-                            let name = arguments.remove(0);
-                            world.resource_scope(
-                                |world, dialogue_commands: Mut<DialogueCommands>| {
-                                    if let Some(com) = dialogue_commands.get(&name) {
-                                        com(world, arguments);
-                                    }
-                                },
-                            );
-                        }
-                    }
-                    SuspendReason::NodeChange { start, end } => {
-                        println!("== Node end: {} ==", end);
-                        println!("== Node start: {} ==", start);
-                    }
-                    SuspendReason::DialogueComplete(last_node) => {
-                        println!("== Node end: {} ==", last_node);
-                        println!("== Dialogue complete ==");
-                        world.resource_scope(|world, mut queue: Mut<DialogueQueue>| {
-                            match queue.pop_front() {
-                                Some(entry) => {
-                                    let mut yarn_programs =
-                                        world.get_resource_mut::<Assets<YarnProgram>>().unwrap();
-                                    if let Some(program) = yarn_programs.remove(entry.program) {
-                                        runner.setup(program, entry.start_node);
-                                    } else {
-                                        runner.state = DialogueRunnerState::Idle;
+                            SuspendReason::Options(new_options) => {
+                                let mut o = Vec::new();
+                                for opt in new_options.iter() {
+                                    let text = runner.table.iter()
+                                        .find(|line_info| line_info.id == opt.line.id)
+                                        .map(|line_info| &line_info.text)
+                                    ;
+                                    if let Some(text) = text {
+                                        o.push(text.clone());
                                     }
                                 }
-                                None => runner.state = DialogueRunnerState::Idle,
+                                *options = Some(o);
                             }
-                        })
+                            SuspendReason::Command(command_text) => {
+                                println!("== Command: {} ==", command_text);
+                                let mut arguments: Vec<String> = command_text.split(" ").map(|s| {s.to_string()}).collect()
+                                ;
+                                if !arguments.is_empty() {
+                                    let name = arguments.remove(0);
+                                    world.resource_scope(|world, dialogue_commands: Mut<DialogueCommands>| {
+                                        if let Some(com) = dialogue_commands.get(&name) {
+                                            com(world, arguments);
+                                        }
+                                    });
+                                }
+                            },
+                            SuspendReason::NodeChange { start, end } => {
+                                println!("== Node end: {} ==", end);
+                                println!("== Node start: {} ==", start);
+                            },
+                            SuspendReason::DialogueComplete(last_node) => {
+                                println!("== Node end: {} ==", last_node);
+                                println!("== Dialogue complete ==");
+                                world.resource_scope(|world, mut queue: Mut<DialogueQueue>| {
+                                    match queue.pop_front() {
+                                        Some(entry) => {
+                                            world.resource_scope(|world, mut yarn_programs: Mut<Assets<YarnProgram>>| {
+                                                world.resource_scope(|_world, mut yarn_tables: Mut<Assets<YarnStringTable>>| {
+                                                    if yarn_programs.get(&entry.program).is_some() && yarn_tables.get(&entry.table).is_some() {
+                                                        if let Some(program) = yarn_programs.remove(entry.program) {
+                                                            if let Some(table) = yarn_tables.remove(entry.table) {
+                                                                runner.setup(program, table, entry.start_node)
+                                                            }
+                                                        }
+                                                    } else {
+                                                        runner.state = DialogueRunnerState::Idle;
+                                                    }
+                                                });
+                                            });
+                                        }
+                                        None => runner.state = DialogueRunnerState::Idle,
+                                    }
+                                })
+                            }
+                        }
                     }
-                },
-            },
-        },
-    );
+                }
+            }
+        }
+    });
 }
 
 pub fn run_if_dialogue_running(runner: Res<DialogueRunner>) -> ShouldRun {
@@ -262,12 +271,39 @@ pub fn run_if_dialogue_running(runner: Res<DialogueRunner>) -> ShouldRun {
 // *****************************************************************************************
 // Asset Loaders
 // *****************************************************************************************
+#[derive(Debug, TypeUuid, Deref)]
+#[uuid = "aa134e2e-a11e-4350-ae1e-b5410d0c333c"]
+pub struct YarnStringTable(pub Vec<LineInfo>);
+
+#[derive(Default)]
+pub struct YarnStringTableLoader;
+
+impl AssetLoader for YarnStringTableLoader {
+    fn load<'a>(
+        &'a self,
+        bytes: &'a [u8],
+        load_context: &'a mut bevy::asset::LoadContext,
+    ) -> bevy::asset::BoxedFuture<'a, Result<(), anyhow::Error>> {
+        Box::pin(async move {
+            let mut csv_reader = csv::Reader::from_reader(bytes);
+            let string_table: Vec<LineInfo> = csv_reader
+                .deserialize()
+                .map(|result| result.unwrap())
+                .collect();
+
+            load_context.set_default_asset(LoadedAsset::new(YarnStringTable(string_table)));
+            Ok(())
+        })
+    }
+
+    fn extensions(&self) -> &[&str] {
+        &["csv"]
+    }
+}
+
 #[derive(Debug, TypeUuid)]
 #[uuid = "35d03e10-93b3-436e-8df4-7c7bea467dc0"]
-pub struct YarnProgram {
-    program: Program,
-    table: Vec<LineInfo>,
-}
+pub struct YarnProgram(Program);
 #[derive(Default)]
 pub struct YarnProgramLoader;
 
@@ -279,19 +315,7 @@ impl AssetLoader for YarnProgramLoader {
     ) -> bevy::asset::BoxedFuture<'a, Result<(), anyhow::Error>> {
         Box::pin(async move {
             let program = Program::decode(bytes).unwrap();
-
-            let mut table_path = load_context.path().to_path_buf();
-
-            table_path.set_extension("csv");
-
-            let bytes = load_context.read_asset_bytes(table_path).await.unwrap();
-            let mut csv_reader = csv::Reader::from_reader(bytes.as_slice());
-            let table: Vec<LineInfo> = csv_reader
-                .deserialize()
-                .map(|result| result.unwrap())
-                .collect();
-
-            load_context.set_default_asset(LoadedAsset::new(YarnProgram { program, table }));
+            load_context.set_default_asset(LoadedAsset::new(YarnProgram(program)));
             Ok(())
         })
     }
@@ -311,11 +335,15 @@ impl Command for AddDialogueToQueueCommand {
         let asset_server = world.get_resource::<AssetServer>().unwrap();
 
         let program = asset_server.load(self.path.as_path());
+        let mut table_path = self.path.clone();
+        table_path.set_extension("csv");
+        let table = asset_server.load(table_path);
 
         let mut dialogue_queue = world.get_resource_mut::<DialogueQueue>().unwrap();
         dialogue_queue.push_back(DialogueQueueEntry {
             path: self.path.clone(),
             program,
+            table,
             start_node: self.start_node,
         })
     }
