@@ -8,7 +8,13 @@ use bevy::{
     utils::HashMap,
 };
 use derive_deref::{Deref, DerefMut};
-use nom::{sequence::{pair, delimited}, bytes::complete::{take_until, is_not}, Err, error::Error, character::complete::char};
+use nom::{
+    bytes::complete::{is_not, take_until},
+    character::complete::char,
+    error::Error,
+    sequence::{delimited, pair},
+    Err,
+};
 use prost::Message;
 pub use yharnam::*;
 
@@ -65,7 +71,11 @@ impl RegisterDialogueCommandExt for World {
 }
 
 impl RegisterDialogueCommandExt for App {
-    fn register_dialogue_command<I: Into<String>>(&mut self, name: I, command: fn(&mut World, Vec<String>)) -> &mut Self {
+    fn register_dialogue_command<I: Into<String>>(
+        &mut self,
+        name: I,
+        command: fn(&mut World, Vec<String>),
+    ) -> &mut Self {
         self.world.register_dialogue_command(name, command);
         self
     }
@@ -147,11 +157,12 @@ fn check_queue(
         println!("Setting up runner");
 
         let temp_entry = queue.get(0).unwrap();
-        if yarn_programs.get(&temp_entry.program).is_some() && yarn_tables.get(&temp_entry.table).is_some() {
-
-        let entry = queue
-            .pop_front()
-            .expect("setup_runner: Dialogue queue empty!");
+        if yarn_programs.get(&temp_entry.program).is_some()
+            && yarn_tables.get(&temp_entry.table).is_some()
+        {
+            let entry = queue
+                .pop_front()
+                .expect("setup_runner: Dialogue queue empty!");
 
             if let Some(program) = yarn_programs.remove(entry.program) {
                 println!("Program Valid!");
