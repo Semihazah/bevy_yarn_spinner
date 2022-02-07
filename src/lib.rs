@@ -8,12 +8,9 @@ use bevy::{
     utils::HashMap,
 };
 use derive_deref::{Deref, DerefMut};
+use nom::{sequence::{pair, delimited}, bytes::complete::{take_until, is_not}, Err, error::Error, character::complete::char};
 use prost::Message;
-use yharnam::*;
-
-pub mod yarn_proto {
-    include!(concat!(env!("OUT_DIR"), "/yarn.rs"));
-}
+pub use yharnam::*;
 
 pub struct DialoguePlugin {
     pub startup_program: PathBuf,
@@ -26,8 +23,8 @@ impl Plugin for DialoguePlugin {
             .init_asset_loader::<YarnProgramLoader>()
             .init_asset_loader::<YarnStringTableLoader>()
             .init_resource::<DialogueQueue>()
-            .add_system_to_stage(CoreStage::PreUpdate, check_queue.system())
-            .add_system_to_stage(CoreStage::PostUpdate, update_runner.exclusive_system())
+            .add_system_to_stage(CoreStage::PostUpdate, check_queue)
+            .add_system_to_stage(CoreStage::PreUpdate, update_runner.exclusive_system())
             .init_resource::<DialogueCommands>();
 
         let program_bytes = fs::read(self.startup_program.as_path()).unwrap();
@@ -63,6 +60,13 @@ impl RegisterDialogueCommandExt for World {
     ) -> &mut Self {
         let mut commands = self.get_resource_or_insert_with(|| DialogueCommands::default());
         commands.insert(name.into(), command);
+        self
+    }
+}
+
+impl RegisterDialogueCommandExt for App {
+    fn register_dialogue_command<I: Into<String>>(&mut self, name: I, command: fn(&mut World, Vec<String>)) -> &mut Self {
+        self.world.register_dialogue_command(name, command);
         self
     }
 }
@@ -141,11 +145,14 @@ fn check_queue(
 ) {
     if runner.state == DialogueRunnerState::Idle && !queue.is_empty() {
         println!("Setting up runner");
+
+        let temp_entry = queue.get(0).unwrap();
+        if yarn_programs.get(&temp_entry.program).is_some() && yarn_tables.get(&temp_entry.table).is_some() {
+
         let entry = queue
             .pop_front()
             .expect("setup_runner: Dialogue queue empty!");
 
-        if yarn_programs.get(&entry.program).is_some() && yarn_tables.get(&entry.table).is_some() {
             if let Some(program) = yarn_programs.remove(entry.program) {
                 println!("Program Valid!");
                 if let Some(table) = yarn_tables.remove(entry.table) {
@@ -154,6 +161,8 @@ fn check_queue(
             } else {
                 println!("Program not ready yet!");
             }
+        } else {
+            println!("Program not ready yet!");
         }
     }
 }
@@ -175,7 +184,7 @@ fn update_runner(
 ) {
     world.resource_scope(|world, mut runner: Mut<DialogueRunner>| {
         if let DialogueRunnerState::Running {text, ..} = runner.state.clone() {
-            let mut next_text = "";
+            let mut next_text = "".to_string();
             let mut next_options = None;
             match runner.vm.execution_state {
                 ExecutionState::WaitingOnOptionSelection => return,
@@ -186,8 +195,10 @@ fn update_runner(
                             .find(|line_info| line_info.id == line.id)
                             .map(|line_info| &line_info.text)
                             ;
+
                             if let Some(new_text) = new_text {
-                                next_text = new_text;
+                                let subs = substitute(new_text.as_str(), &line.substitutions);
+                                next_text = subs;
                             }
                             else {
                                 panic!("Error! unable to find line!");
@@ -204,7 +215,7 @@ fn update_runner(
                                     o.push(t.clone());
                                 }
                             }
-                            next_text = &text;
+                            next_text = text;
                             next_options = Some(o);
                         }
                         SuspendReason::Command(command_text) => {
@@ -254,7 +265,7 @@ fn update_runner(
             }
 
             runner.state = DialogueRunnerState::Running {
-                text: next_text.to_string(),
+                text: next_text,
                 options: next_options,
             }
         }
@@ -347,4 +358,39 @@ impl Command for AddDialogueToQueueCommand {
             start_node: self.start_node,
         })
     }
+}
+
+fn substitute(input: &str, substitutions: &Vec<String>) -> String {
+    let mut parser = pair(
+        take_until("{"),
+        delimited(char('{'), is_not("}"), char('}')),
+    );
+
+    //let mut parser = pair(is_not("["), delimited(char('['), is_not("]"), char(']')));
+    let mut return_string = "".to_string();
+    let mut remainder = input.to_string();
+    let mut result: Result<(&str, (&str, &str)), Err<Error<&str>>> = parser(&input);
+
+    if result.is_ok() {
+        let mut idx: usize = 0;
+
+        while result.is_ok() {
+            if let Ok((remaining, (first, _sub))) = result {
+                return_string.push_str(first);
+
+                return_string.push_str(&substitutions.get(idx).unwrap().to_string());
+                idx += 1;
+                remainder = remaining.to_string();
+                result = parser(remaining);
+                if let Err(_err) = &result {
+                    //println!("Failed to find more arguments. Error: {:?}, Remainder: {}", err, remainder);
+                    return_string.push_str(&remainder);
+                }
+            }
+        }
+    } else {
+        return_string = remainder.to_string();
+    }
+
+    return_string
 }
