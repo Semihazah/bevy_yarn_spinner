@@ -30,7 +30,7 @@ impl Plugin for DialoguePlugin {
             .init_asset_loader::<YarnStringTableLoader>()
             .init_resource::<DialogueQueue>()
             .add_system_to_stage(CoreStage::PostUpdate, check_queue)
-            .add_system_to_stage(CoreStage::PreUpdate, update_runner.exclusive_system())
+            .add_system_to_stage(CoreStage::PreUpdate, update_runner.with_run_criteria(run_if_no_dialogue_hold))
             .init_resource::<DialogueCommands>();
 
         let program_bytes = fs::read(self.startup_program.as_path()).unwrap();
@@ -144,6 +144,8 @@ impl PartialEq for DialogueRunnerState {
 
 #[derive(Deref, DerefMut, Default)]
 pub struct DialogueCommands(HashMap<String, fn(&mut World, Vec<String>)>);
+
+pub struct DialogueHold;
 // *****************************************************************************************
 // Systems
 // *****************************************************************************************
@@ -178,115 +180,91 @@ fn check_queue(
     }
 }
 
-pub fn run_if_dialogue_queue_occupied(queue: Res<DialogueQueue>) -> ShouldRun {
-    match !queue.is_empty() {
-        true => ShouldRun::Yes,
-        false => ShouldRun::No,
-    }
-}
-
 fn update_runner(
-    world: &mut World,
-    /*     mut runner: ResMut<DialogueRunner>,
+    mut commands: Commands,
+    mut runner: ResMut<DialogueRunner>,
     mut yarn_tables: ResMut<Assets<YarnStringTable>>,
     mut queue: ResMut<DialogueQueue>,
     mut yarn_programs: ResMut<Assets<YarnProgram>>,
-    dialogue_commands: Res<DialogueCommands>, */
 ) {
-    world.resource_scope(|world, mut runner: Mut<DialogueRunner>| {
-        if let DialogueRunnerState::Running {text, ..} = runner.state.clone() {
-            let mut next_text = "".to_string();
-            let mut next_options = None;
-            match runner.vm.execution_state {
-                ExecutionState::WaitingOnOptionSelection => return,
-                _ => {
-                    match runner.vm.continue_dialogue() {
-                        SuspendReason::Line(line) => {
-                            let new_text = runner.table.iter()
-                            .find(|line_info| line_info.id == line.id)
-                            .map(|line_info| &line_info.text)
-                            ;
+    if let DialogueRunnerState::Running {text, ..} = runner.state.clone() {
+        let mut next_text = "".to_string();
+        let mut next_options = None;
+        match runner.vm.execution_state {
+            ExecutionState::WaitingOnOptionSelection => return,
+            _ => {
+                match runner.vm.continue_dialogue() {
+                    SuspendReason::Line(line) => {
+                        let new_text = runner.table.iter()
+                        .find(|line_info| line_info.id == line.id)
+                        .map(|line_info| &line_info.text)
+                        ;
 
-                            if let Some(new_text) = new_text {
-                                let subs = substitute(new_text.as_str(), &line.substitutions);
-                                next_text = subs;
-                            }
-                            else {
-                                panic!("Error! unable to find line!");
-                            }
+                        if let Some(new_text) = new_text {
+                            let subs = substitute(new_text.as_str(), &line.substitutions);
+                            next_text = subs;
                         }
-                        SuspendReason::Options(new_options) => {
-                            let mut o = Vec::new();
-                            for opt in new_options.iter() {
-                                let t = runner.table.iter()
-                                    .find(|line_info| line_info.id == opt.line.id)
-                                    .map(|line_info| &line_info.text)
-                                ;
-                                if let Some(t) = t {
-                                    o.push(t.clone());
-                                }
-                            }
-                            next_text = text;
-                            next_options = Some(o);
+                        else {
+                            panic!("Error! unable to find line!");
                         }
-                        SuspendReason::Command(command_text) => {
-                            println!("== Command: {} ==", command_text);
-                            let mut arguments: Vec<String> = command_text.split(" ").map(|s| {s.to_string()}).collect()
+                    }
+                    SuspendReason::Options(new_options) => {
+                        let mut o = Vec::new();
+                        for opt in new_options.iter() {
+                            let t = runner.table.iter()
+                                .find(|line_info| line_info.id == opt.line.id)
+                                .map(|line_info| &line_info.text)
                             ;
-                            if !arguments.is_empty() {
-                                let name = arguments.remove(0);
-                                world.resource_scope(|world, dialogue_commands: Mut<DialogueCommands>| {
-                                    if let Some(com) = dialogue_commands.get(&name) {
-                                        com(world, arguments);
-                                    }
-                                });
+                            if let Some(t) = t {
+                                o.push(t.clone());
                             }
-                        },
-                        SuspendReason::NodeChange { start, end } => {
-                            println!("== Node end: {} ==", end);
-                            println!("== Node start: {} ==", start);
-                        },
-                        SuspendReason::DialogueComplete(last_node) => {
-                            println!("== Node end: {} ==", last_node);
-                            println!("== Dialogue complete ==");
-                            world.resource_scope(|world, mut queue: Mut<DialogueQueue>| {
-                                match queue.pop_front() {
-                                    Some(entry) => {
-                                        world.resource_scope(|world, mut yarn_programs: Mut<Assets<YarnProgram>>| {
-                                            world.resource_scope(|_world, mut yarn_tables: Mut<Assets<YarnStringTable>>| {
-                                                if yarn_programs.get(&entry.program).is_some() && yarn_tables.get(&entry.table).is_some() {
-                                                    if let Some(program) = yarn_programs.remove(entry.program) {
-                                                        if let Some(table) = yarn_tables.remove(entry.table) {
-                                                            runner.setup(program, table, entry.start_node)
-                                                        }
-                                                    }
-                                                } else {
-                                                    runner.state = DialogueRunnerState::Idle;
-                                                }
-                                            });
-                                        });
-                                    }
-                                    None => runner.state = DialogueRunnerState::Idle,
-                                }
-                            });
-                            return
                         }
+                        next_text = text;
+                        next_options = Some(o);
+                    }
+                    SuspendReason::Command(command_text) => {
+                        println!("== Command: {} ==", command_text);
+                        let mut arguments: Vec<String> = command_text.split(" ").map(|s| {s.to_string()}).collect()
+                        ;
+                        if !arguments.is_empty() {
+                            let name = arguments.remove(0);
+                            commands.add(ExecuteDialogueCommand {
+                                command: name, 
+                                args: arguments,
+                            });
+                        }
+                    },
+                    SuspendReason::NodeChange { start, end } => {
+                        println!("== Node end: {} ==", end);
+                        println!("== Node start: {} ==", start);
+                    },
+                    SuspendReason::DialogueComplete(last_node) => {
+                        println!("== Node end: {} ==", last_node);
+                        println!("== Dialogue complete ==");
+                        match queue.pop_front() {
+                            Some(entry) => {
+                                if yarn_programs.get(&entry.program).is_some() && yarn_tables.get(&entry.table).is_some() {
+                                    if let Some(program) = yarn_programs.remove(entry.program) {
+                                        if let Some(table) = yarn_tables.remove(entry.table) {
+                                            runner.setup(program, table, entry.start_node)
+                                        }
+                                    }
+                                } else {
+                                    runner.state = DialogueRunnerState::Idle;
+                                }
+                            }
+                            None => runner.state = DialogueRunnerState::Idle,
+                        }
+                        return
                     }
                 }
             }
-
-            runner.state = DialogueRunnerState::Running {
-                text: next_text,
-                options: next_options,
-            }
         }
-    });
-}
 
-pub fn run_if_dialogue_running(runner: Res<DialogueRunner>) -> ShouldRun {
-    match runner.state {
-        DialogueRunnerState::Idle => ShouldRun::No,
-        DialogueRunnerState::Running { .. } => ShouldRun::Yes,
+        runner.state = DialogueRunnerState::Running {
+            text: next_text,
+            options: next_options,
+        }
     }
 }
 
@@ -404,4 +382,43 @@ fn substitute(input: &str, substitutions: &Vec<String>) -> String {
     }
 
     return_string
+}
+
+// *****************************************************************************************
+// Run Conditions
+// *****************************************************************************************
+pub fn run_if_dialogue_queue_occupied(queue: Res<DialogueQueue>) -> ShouldRun {
+    match !queue.is_empty() {
+        true => ShouldRun::Yes,
+        false => ShouldRun::No,
+    }
+}
+
+pub fn run_if_no_dialogue_hold(hold: Option<Res<DialogueHold>>) -> ShouldRun {
+    match hold {
+        Some(_) => ShouldRun::No,
+        None => ShouldRun::Yes,
+    }
+}
+
+pub fn run_if_dialogue_running(runner: Res<DialogueRunner>) -> ShouldRun {
+    match runner.state {
+        DialogueRunnerState::Idle => ShouldRun::No,
+        DialogueRunnerState::Running { .. } => ShouldRun::Yes,
+    }
+}
+
+pub struct ExecuteDialogueCommand {
+    command: String,
+    args: Vec<String>,
+}
+
+impl Command for ExecuteDialogueCommand {
+    fn write(self, world: &mut World) {
+        world.resource_scope(|world, command_registry: Mut<DialogueCommands>| {
+            if let Some(com) = command_registry.0.get(&self.command) {
+                com(world, self.args);
+            }
+        });
+    }
 }
