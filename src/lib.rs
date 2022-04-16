@@ -121,7 +121,7 @@ impl DialogueRunner {
         //println!("Nodes: {:?}", vm.program.nodes);
         if self.vm.program.nodes.contains_key(&start_node) {
             // Set the start node.
-            println!("Start node set!");
+            //println!("Start node set!");
             self.vm.set_node(&start_node);
         }
         self.state = DialogueRunnerState::Running {
@@ -156,7 +156,7 @@ fn check_queue(
     mut yarn_tables: ResMut<Assets<YarnStringTable>>,
 ) {
     if runner.state == DialogueRunnerState::Idle && !queue.is_empty() {
-        println!("Setting up runner");
+        //println!("Setting up runner");
 
         let temp_entry = queue.get(0).unwrap();
         if yarn_programs.get(&temp_entry.program).is_some()
@@ -167,15 +167,15 @@ fn check_queue(
                 .expect("setup_runner: Dialogue queue empty!");
 
             if let Some(program) = yarn_programs.remove(entry.program) {
-                println!("Program Valid!");
+                //println!("Program Valid!");
                 if let Some(table) = yarn_tables.remove(entry.table) {
                     runner.setup(program, table, entry.start_node)
                 }
             } else {
-                println!("Program not ready yet!");
+                //println!("Program not ready yet!");
             }
         } else {
-            println!("Program not ready yet!");
+            //println!("Program not ready yet!");
         }
     }
 }
@@ -223,7 +223,7 @@ fn update_runner(
                         next_options = Some(o);
                     }
                     SuspendReason::Command(command_text) => {
-                        println!("== Command: {} ==", command_text);
+                        //println!("== Command: {} ==", command_text);
                         let mut arguments: Vec<String> = command_text.split(" ").map(|s| {s.to_string()}).collect()
                         ;
                         if !arguments.is_empty() {
@@ -234,13 +234,13 @@ fn update_runner(
                             });
                         }
                     },
-                    SuspendReason::NodeChange { start, end } => {
-                        println!("== Node end: {} ==", end);
-                        println!("== Node start: {} ==", start);
+                    SuspendReason::NodeChange { .. } => {
+                        //println!("== Node end: {} ==", end);
+                        //println!("== Node start: {} ==", start);
                     },
-                    SuspendReason::DialogueComplete(last_node) => {
-                        println!("== Node end: {} ==", last_node);
-                        println!("== Dialogue complete ==");
+                    SuspendReason::DialogueComplete(_last_node) => {
+                        //println!("== Node end: {} ==", last_node);
+                        //println!("== Dialogue complete ==");
                         match queue.pop_front() {
                             Some(entry) => {
                                 if yarn_programs.get(&entry.program).is_some() && yarn_tables.get(&entry.table).is_some() {
@@ -409,8 +409,8 @@ pub fn run_if_dialogue_running(runner: Res<DialogueRunner>) -> ShouldRun {
 }
 
 pub struct ExecuteDialogueCommand {
-    command: String,
-    args: Vec<String>,
+    pub command: String,
+    pub args: Vec<String>,
 }
 
 impl Command for ExecuteDialogueCommand {
