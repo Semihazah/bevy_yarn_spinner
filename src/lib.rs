@@ -104,10 +104,14 @@ pub struct DialogueRunner {
 #[derive(Debug, Clone)]
 pub enum DialogueRunnerState {
     Idle,
-    Running {
-        text: String,
-        options: Option<Vec<String>>,
-    },
+    Running(DialogueRunningCurrentEntry),
+}
+
+#[derive(Debug, Clone)]
+pub enum DialogueRunningCurrentEntry {
+    Null,
+    Text(String),
+    Options(Vec<String>),
 }
 
 impl DialogueRunner {
@@ -124,10 +128,7 @@ impl DialogueRunner {
             //println!("Start node set!");
             self.vm.set_node(&start_node);
         }
-        self.state = DialogueRunnerState::Running {
-            text: "".to_string(),
-            options: None,
-        };
+        self.state = DialogueRunnerState::Running(DialogueRunningCurrentEntry::Null);
     }
 }
 
@@ -187,10 +188,8 @@ fn update_runner(
     mut queue: ResMut<DialogueQueue>,
     mut yarn_programs: ResMut<Assets<YarnProgram>>,
 ) {
-    if let DialogueRunnerState::Running {text, ..} = runner.state.clone() {
-        let mut next_text = "".to_string();
-        let mut next_options = None;
-        match runner.vm.execution_state {
+    if let DialogueRunnerState::Running(..) = runner.state.clone() {
+        let next_selection = match runner.vm.execution_state {
             ExecutionState::WaitingOnOptionSelection => return,
             _ => {
                 match runner.vm.continue_dialogue() {
@@ -202,7 +201,7 @@ fn update_runner(
 
                         if let Some(new_text) = new_text {
                             let subs = substitute(new_text.as_str(), &line.substitutions);
-                            next_text = subs;
+                            DialogueRunningCurrentEntry::Text(subs)
                         }
                         else {
                             panic!("Error! unable to find line!");
@@ -219,8 +218,7 @@ fn update_runner(
                                 o.push(t.clone());
                             }
                         }
-                        next_text = text;
-                        next_options = Some(o);
+                        DialogueRunningCurrentEntry::Options(o)
                     }
                     SuspendReason::Command(command_text) => {
                         //println!("== Command: {} ==", command_text);
@@ -233,8 +231,10 @@ fn update_runner(
                                 args: arguments,
                             });
                         }
+                        DialogueRunningCurrentEntry::Null
                     },
                     SuspendReason::NodeChange { .. } => {
+                        DialogueRunningCurrentEntry::Null
                         //println!("== Node end: {} ==", end);
                         //println!("== Node start: {} ==", start);
                     },
@@ -259,12 +259,9 @@ fn update_runner(
                     }
                 }
             }
-        }
+        };
 
-        runner.state = DialogueRunnerState::Running {
-            text: next_text,
-            options: next_options,
-        }
+        runner.state = DialogueRunnerState::Running(next_selection);
     }
 }
 
