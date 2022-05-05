@@ -29,6 +29,7 @@ impl Plugin for DialoguePlugin {
             .init_asset_loader::<YarnProgramLoader>()
             .init_asset_loader::<YarnStringTableLoader>()
             .init_resource::<DialogueQueue>()
+            .add_event::<EventDialogueUpdated>()
             .add_system_to_stage(CoreStage::PostUpdate, check_queue)
             .add_system_to_stage(CoreStage::PreUpdate, update_runner.with_run_criteria(run_if_no_dialogue_hold))
             .init_resource::<DialogueCommands>();
@@ -80,6 +81,10 @@ impl RegisterDialogueCommandExt for App {
         self
     }
 }
+// *****************************************************************************************
+// Events
+// *****************************************************************************************
+pub struct EventDialogueUpdated;
 // *****************************************************************************************
 // Resources
 // *****************************************************************************************
@@ -187,6 +192,7 @@ fn update_runner(
     mut yarn_tables: ResMut<Assets<YarnStringTable>>,
     mut queue: ResMut<DialogueQueue>,
     mut yarn_programs: ResMut<Assets<YarnProgram>>,
+    mut event_writer: EventWriter<EventDialogueUpdated>,
 ) {
     if let DialogueRunnerState::Running(..) = runner.state.clone() {
         let next_selection = match runner.vm.execution_state {
@@ -201,6 +207,7 @@ fn update_runner(
 
                         if let Some(new_text) = new_text {
                             let subs = substitute(new_text.as_str(), &line.substitutions);
+                            event_writer.send(EventDialogueUpdated);
                             DialogueRunningCurrentEntry::Text(subs)
                         }
                         else {
@@ -218,6 +225,7 @@ fn update_runner(
                                 o.push(t.clone());
                             }
                         }
+                        event_writer.send(EventDialogueUpdated);
                         DialogueRunningCurrentEntry::Options(o)
                     }
                     SuspendReason::Command(command_text) => {
